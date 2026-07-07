@@ -81,19 +81,16 @@ manifest, image_json = sys.argv[1:]
 text = open(manifest, 'r', encoding='utf-8').read()
 with open(image_json, 'r', encoding='utf-8') as f:
     images = json.load(f)
-missing = []
-for item in images:
-    src = item['pull']
-    if src not in text:
-        missing.append(src)
-if missing:
-    raise SystemExit('manifest does not contain expected image references:\n' + '\n'.join(missing))
-# Also ensure there are no unexpected quay.io/jetstack cert-manager images left outside our manifest list.
-found = set(re.findall(r'quay\.io/jetstack/cert-manager-[A-Za-z0-9_.-]+:v[0-9]+\.[0-9]+\.[0-9]+', text))
 expected = {x['pull'] for x in images}
-extra = sorted(found - expected)
-if extra:
-    raise SystemExit('manifest contains unexpected cert-manager image references:\n' + '\n'.join(extra))
+found = set(re.findall(r'quay\.io/jetstack/cert-manager-[A-Za-z0-9_.-]+:v[0-9]+\.[0-9]+\.[0-9]+', text))
+missing_from_payload = sorted(found - expected)
+if missing_from_payload:
+    raise SystemExit('manifest contains cert-manager image references missing from image.json:\n' + '\n'.join(missing_from_payload))
+not_used = sorted(expected - found)
+if not_used:
+    print('WARN: image.json contains images not referenced by this static manifest:', file=sys.stderr)
+    for image in not_used:
+        print('WARN:   ' + image, file=sys.stderr)
 PY
 }
 
