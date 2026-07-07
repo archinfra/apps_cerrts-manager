@@ -6,15 +6,18 @@ cert-manager Kubernetes offline `.run` installer package.
 
 This package downloads the official cert-manager release manifest at build time, packages all required images into a self-extracting offline `.run`, retags and pushes those images to an internal registry at install time, rewrites the manifest image references, and deploys cert-manager on Kubernetes.
 
+It can also optionally install an integrated AliDNS DNS01 webhook solver, create the Aliyun AK/SK Secret, create a Let’s Encrypt ClusterIssuer, and create a Certificate for a domain such as `weagent.cc` and `*.weagent.cc`.
+
 ## Version
 
 - cert-manager: `v1.20.3`
+- AliDNS webhook: `wjiec/alidns-webhook:v1.0.3`
 - default namespace: `cert-manager`
 - default registry prefix: `sealos.hub:5000/kube4`
 - default image pull policy: `IfNotPresent`
 - release manifest: `https://github.com/cert-manager/cert-manager/releases/download/v1.20.3/cert-manager.yaml`
 
-The default version is `v1.20.3`, the latest GitHub release when this package was created. The release notes mark it as a security patch release and say all users should upgrade.
+The default cert-manager version is `v1.20.3`, the latest GitHub release when this package was created. The release notes mark it as a security patch release and say all users should upgrade.
 
 ## Images
 
@@ -25,6 +28,7 @@ quay.io/jetstack/cert-manager-controller:v1.20.3
 quay.io/jetstack/cert-manager-cainjector:v1.20.3
 quay.io/jetstack/cert-manager-webhook:v1.20.3
 quay.io/jetstack/cert-manager-acmesolver:v1.20.3
+docker.io/wjiec/alidns-webhook:v1.0.3
 ```
 
 The `acmesolver` image is included because cert-manager dynamically creates ACME HTTP-01 solver Pods. Offline clusters need this image in the internal registry even though it is not a long-running Deployment.
@@ -38,6 +42,7 @@ sealos.hub:5000/kube4/jetstack/cert-manager-controller:v1.20.3
 sealos.hub:5000/kube4/jetstack/cert-manager-cainjector:v1.20.3
 sealos.hub:5000/kube4/jetstack/cert-manager-webhook:v1.20.3
 sealos.hub:5000/kube4/jetstack/cert-manager-acmesolver:v1.20.3
+sealos.hub:5000/kube4/wjiec/alidns-webhook:v1.0.3
 ```
 
 ## What this package creates
@@ -51,6 +56,18 @@ The official release manifest creates cert-manager CRDs and runtime resources, i
 - Deployment: `cert-manager-cainjector`
 - Deployment: `cert-manager-webhook`
 - Service: `cert-manager-webhook`
+
+When AliDNS is enabled, the installer also creates:
+
+- Secret: `alidns-secret`, containing Aliyun AK/SK
+- ServiceAccount: `alidns-webhook`
+- RBAC for extension API server auth delegation, flowcontrol, secrets read, and domain solver access
+- Issuer/Certificate resources for the webhook serving TLS certificate
+- Service: `alidns-webhook`
+- Deployment: `alidns-webhook`
+- APIService: `v1alpha1.<groupName>`
+- Optional ClusterIssuer: for example `letsencrypt-dns01-staging`
+- Optional Certificate: for example `weagent-cc`, writing TLS cert to `weagent-cc-tls`
 
 ## Build locally
 
@@ -99,14 +116,23 @@ dist/cert-manager-1.20.3-arm64.run.sha256
 Target host requirements:
 
 - `bash`
-- common Linux base tools: `awk`, `head`, `wc`, `dd`, `od`, `tail`, `tar`, `sed`
+- common Linux base tools: `awk`, `head`, `wc`, `dd`, `od`, `tail`, `tar`, `sed`, `base64`
 - `docker`, unless `--skip-image-prepare` is used
 - `kubectl`
 - optional `sha256sum`, only for checking the `.sha256` file before running the installer
 
-The target host does **not** need `jq`, Python, curl, or Internet access.
+The target host does **not** need `jq`, Python, curl, Helm, or Internet access.
 
-## Install
+## Help
+
+Show all options, including AliDNS options:
+
+```bash
+./cert-manager-1.20.3-amd64.run -h
+./cert-manager-1.20.3-amd64.run help
+```
+
+## Install cert-manager only
 
 ```bash
 sha256sum -c cert-manager-1.20.3-amd64.run.sha256
@@ -120,7 +146,7 @@ chmod +x cert-manager-1.20.3-amd64.run
   -y
 ```
 
-If the internal registry already contains all four images:
+If the internal registry already contains all images:
 
 ```bash
 ./cert-manager-1.20.3-amd64.run install \
@@ -141,12 +167,111 @@ Use another namespace:
 
 The installer rewrites namespaced resources and webhook CRD conversion service namespaces to the target namespace. Resource names remain the upstream defaults, such as `cert-manager`, `cert-manager-webhook`, and `cert-manager-cainjector`.
 
+## Install cert-manager + AliDNS for `weagent.cc`
+
+Recommended first run: use Let’s Encrypt staging.
+
+```bash
+./cert-manager-1.20.3-amd64.run install \
+  --registry sealos.hub:5000/kube4 \
+  -n cert-manager \
+  --alidns-domain weagent.cc \
+  --alidns-access-key-id 'YOUR_ALIYUN_ACCESS_KEY_ID' \
+  --alidns-access-key-secret 'YOUR_ALIYUN_ACCESS_KEY_SECRET' \
+  --alidns-email admin@weagent.cc \
+  --alidns-staging \
+  -y
+```
+
+This command automatically derives:
+
+```text
+groupName:                 acme.weagent.cc
+ClusterIssuer:             letsencrypt-dns01-staging
+Certificate name:          weagent-cc
+Certificate namespace:     default
+TLS Secret:                weagent-cc-tls
+DNS names:                 weagent.cc, *.weagent.cc
+ACME server:               https://acme-staging-v02.api.letsencrypt.org/directory
+```
+
+For production Let’s Encrypt:
+
+```bash
+./cert-manager-1.20.3-amd64.run install \
+  --registry sealos.hub:5000/kube4 \
+  --skip-image-prepare \
+  -n cert-manager \
+  --alidns-domain weagent.cc \
+  --alidns-access-key-id 'YOUR_ALIYUN_ACCESS_KEY_ID' \
+  --alidns-access-key-secret 'YOUR_ALIYUN_ACCESS_KEY_SECRET' \
+  --alidns-email admin@weagent.cc \
+  --alidns-prod \
+  -y
+```
+
+If your Gateway is in another namespace, put the resulting TLS Secret there:
+
+```bash
+./cert-manager-1.20.3-amd64.run install \
+  --registry sealos.hub:5000/kube4 \
+  --skip-image-prepare \
+  -n cert-manager \
+  --alidns-domain weagent.cc \
+  --alidns-access-key-id 'YOUR_ALIYUN_ACCESS_KEY_ID' \
+  --alidns-access-key-secret 'YOUR_ALIYUN_ACCESS_KEY_SECRET' \
+  --alidns-email admin@weagent.cc \
+  --alidns-prod \
+  --alidns-certificate-namespace envoy-gateway-system \
+  --alidns-certificate-secret-name weagent-cc-tls \
+  -y
+```
+
+The default `--alidns-wait-certificate false` means install does not block until Let’s Encrypt finishes DNS propagation and issuance. Check certificate status separately.
+
+## AliDNS options
+
+Important options:
+
+```text
+--enable-alidns-webhook
+--alidns-access-key-id <ak>
+--alidns-access-key-secret <sk>
+--alidns-domain <domain>
+--alidns-email <email>
+--alidns-group-name <group>
+--alidns-region <region>
+--alidns-staging
+--alidns-prod
+--alidns-acme-server <url>
+--alidns-issuer-name <name>
+--alidns-create-issuer <true|false>
+--alidns-create-certificate <true|false>
+--alidns-certificate-namespace <ns>
+--alidns-certificate-name <name>
+--alidns-certificate-secret-name <name>
+--alidns-wildcard <true|false>
+--alidns-wait-certificate <true|false>
+```
+
+Rules:
+
+- `--alidns-domain weagent.cc` automatically enables AliDNS.
+- If `--alidns-group-name` is omitted, the installer uses `acme.<domain>`, for example `acme.weagent.cc`.
+- If `--alidns-email` is omitted and domain is set, the installer uses `admin@<domain>`.
+- If `--alidns-wildcard true`, the Certificate includes both `weagent.cc` and `*.weagent.cc`.
+- If `--alidns-create-certificate false`, the installer only creates the webhook and ClusterIssuer.
+
 ## Status
 
 ```bash
 ./cert-manager-1.20.3-amd64.run status -n cert-manager
 
 kubectl get pods,svc,deploy,job -n cert-manager -l app.kubernetes.io/instance=cert-manager
+kubectl get pods,svc,deploy -n cert-manager -l app.kubernetes.io/instance=alidns-webhook
+kubectl get apiservice | grep -E 'alidns|acme\.'
+kubectl get clusterissuer
+kubectl get certificate -A
 kubectl get crd | grep -E 'cert-manager.io|acme.cert-manager.io'
 ```
 
@@ -156,9 +281,20 @@ Check rollout:
 kubectl rollout status deploy/cert-manager -n cert-manager
 kubectl rollout status deploy/cert-manager-cainjector -n cert-manager
 kubectl rollout status deploy/cert-manager-webhook -n cert-manager
+kubectl rollout status deploy/alidns-webhook -n cert-manager
 ```
 
-## Smoke test
+Check certificate issuance:
+
+```bash
+kubectl describe certificate -n default weagent-cc
+kubectl get order,challenge -A
+kubectl describe challenge -A
+kubectl logs -n cert-manager deploy/cert-manager
+kubectl logs -n cert-manager deploy/alidns-webhook
+```
+
+## Smoke test without AliDNS
 
 Create a self-signed ClusterIssuer:
 
@@ -214,6 +350,15 @@ By default, uninstall deletes cert-manager runtime resources but keeps CRDs:
 ./cert-manager-1.20.3-amd64.run uninstall -n cert-manager -y
 ```
 
+If AliDNS was installed by this package and you want to delete rendered AliDNS resources too, pass the same domain or groupName:
+
+```bash
+./cert-manager-1.20.3-amd64.run uninstall \
+  -n cert-manager \
+  --alidns-domain weagent.cc \
+  -y
+```
+
 Delete CRDs too:
 
 ```bash
@@ -225,7 +370,9 @@ Be careful: deleting CRDs deletes cert-manager custom resources such as Certific
 ## Production notes
 
 - Keep cert-manager private inside the cluster; it usually does not need NodePort or external exposure.
-- For Alibaba Cloud DNS-01, install cert-manager first, then create the Aliyun DNS webhook/solver integration separately.
+- For Alibaba Cloud DNS-01, the domain must be hosted in AliDNS or the AK/SK must be able to manage the DNS zone.
+- Prefer a least-privilege RAM user that can manage TXT records for `_acme-challenge.weagent.cc`.
+- Start with `--alidns-staging`, then switch to `--alidns-prod` after Challenge/Certificate flow is verified.
 - Back up Kubernetes resources and TLS Secrets before deleting CRDs.
 - If you use Gateway API HTTPRoutes for ACME HTTP-01, make sure Gateway API CRDs and a compatible Gateway controller are already installed.
 
