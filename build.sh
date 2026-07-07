@@ -7,6 +7,7 @@ VERSION="$(cat "${ROOT_DIR}/VERSION" | tr -d '[:space:]')"
 TAG="v${VERSION#v}"
 DIST_DIR="${ROOT_DIR}/dist"
 IMAGE_JSON="${ROOT_DIR}/images/image.json"
+ALIDNS_TEMPLATE="${ROOT_DIR}/manifests/alidns-webhook.yaml.tmpl"
 MANIFEST_URL="${MANIFEST_URL:-https://github.com/cert-manager/cert-manager/releases/download/${TAG}/cert-manager.yaml}"
 
 usage() {
@@ -46,6 +47,7 @@ need curl
 
 [[ -f "${ROOT_DIR}/install.sh" ]] || die "install.sh not found"
 [[ -f "${IMAGE_JSON}" ]] || die "images/image.json not found"
+[[ -f "${ALIDNS_TEMPLATE}" ]] || die "manifests/alidns-webhook.yaml.tmpl not found"
 grep -qx '__PAYLOAD_BELOW__' "${ROOT_DIR}/install.sh" || die "install.sh must contain a standalone __PAYLOAD_BELOW__ marker"
 python3 -m json.tool "${IMAGE_JSON}" >/dev/null
 bash -n "${ROOT_DIR}/install.sh"
@@ -88,7 +90,7 @@ if missing_from_payload:
     raise SystemExit('manifest contains cert-manager image references missing from image.json:\n' + '\n'.join(missing_from_payload))
 not_used = sorted(expected - found)
 if not_used:
-    print('WARN: image.json contains images not referenced by this static manifest:', file=sys.stderr)
+    print('WARN: image.json contains images not referenced by the cert-manager static manifest:', file=sys.stderr)
     for image in not_used:
         print('WARN:   ' + image, file=sys.stderr)
 PY
@@ -108,6 +110,7 @@ build_one() {
   mkdir -p "${payload_dir}/images" "${payload_dir}/manifests" "${payload_dir}/meta" "${DIST_DIR}"
 
   write_arch_image_json "${arch}" "${payload_dir}/images/image.json"
+  cp "${ALIDNS_TEMPLATE}" "${payload_dir}/manifests/alidns-webhook.yaml.tmpl"
 
   echo ">>> downloading ${MANIFEST_URL}"
   curl -fsSL "${MANIFEST_URL}" -o "${manifest_path}"
