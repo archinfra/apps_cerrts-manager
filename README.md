@@ -24,11 +24,12 @@ The offline payload includes these images for each target architecture:
 quay.io/jetstack/cert-manager-controller:v1.20.3
 quay.io/jetstack/cert-manager-cainjector:v1.20.3
 quay.io/jetstack/cert-manager-webhook:v1.20.3
-quay.io/jetstack/cert-manager-startupapicheck:v1.20.3
 quay.io/jetstack/cert-manager-acmesolver:v1.20.3
 ```
 
 The `acmesolver` image is included because cert-manager dynamically creates ACME HTTP-01 solver Pods. Offline clusters need this image in the internal registry even though it is not a long-running Deployment.
+
+The official `cert-manager.yaml` static release manifest does not include the Helm chart `startupapicheck` Job, so this offline package does not require or package `cert-manager-startupapicheck`.
 
 Default retargeted images:
 
@@ -36,7 +37,6 @@ Default retargeted images:
 sealos.hub:5000/kube4/jetstack/cert-manager-controller:v1.20.3
 sealos.hub:5000/kube4/jetstack/cert-manager-cainjector:v1.20.3
 sealos.hub:5000/kube4/jetstack/cert-manager-webhook:v1.20.3
-sealos.hub:5000/kube4/jetstack/cert-manager-startupapicheck:v1.20.3
 sealos.hub:5000/kube4/jetstack/cert-manager-acmesolver:v1.20.3
 ```
 
@@ -51,7 +51,6 @@ The official release manifest creates cert-manager CRDs and runtime resources, i
 - Deployment: `cert-manager-cainjector`
 - Deployment: `cert-manager-webhook`
 - Service: `cert-manager-webhook`
-- Job: `cert-manager-startupapicheck`
 
 ## Build locally
 
@@ -121,7 +120,7 @@ chmod +x cert-manager-1.20.3-amd64.run
   -y
 ```
 
-If the internal registry already contains all five images:
+If the internal registry already contains all four images:
 
 ```bash
 ./cert-manager-1.20.3-amd64.run install \
@@ -157,7 +156,6 @@ Check rollout:
 kubectl rollout status deploy/cert-manager -n cert-manager
 kubectl rollout status deploy/cert-manager-cainjector -n cert-manager
 kubectl rollout status deploy/cert-manager-webhook -n cert-manager
-kubectl logs -n cert-manager job/cert-manager-startupapicheck
 ```
 
 ## Smoke test
