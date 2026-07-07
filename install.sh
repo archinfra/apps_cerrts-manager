@@ -225,8 +225,6 @@ install_app() {
   prepare_images
   local rendered
   rendered="$(render_manifest)"
-  info "delete previous startupapicheck job if present"
-  kubectl delete job cert-manager-startupapicheck -n "${NAMESPACE}" --ignore-not-found=true || true
   info "kubectl apply -f rendered manifest"
   kubectl apply -f "${rendered}"
   info "waiting for cert-manager CRDs"
@@ -237,8 +235,6 @@ install_app() {
   kubectl rollout status deployment/cert-manager -n "${NAMESPACE}" --timeout="${WAIT_TIMEOUT}"
   kubectl rollout status deployment/cert-manager-cainjector -n "${NAMESPACE}" --timeout="${WAIT_TIMEOUT}"
   kubectl rollout status deployment/cert-manager-webhook -n "${NAMESPACE}" --timeout="${WAIT_TIMEOUT}"
-  info "waiting for startupapicheck job"
-  kubectl wait --for=condition=Complete job/cert-manager-startupapicheck -n "${NAMESPACE}" --timeout="${WAIT_TIMEOUT}" || true
   status_app
 }
 
