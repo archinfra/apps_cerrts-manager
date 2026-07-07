@@ -1,0 +1,348 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: __ALIDNS_SECRET_NAME__
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+type: Opaque
+data:
+  access-key-id: __ALIDNS_ACCESS_KEY_ID_B64__
+  access-key-secret: __ALIDNS_ACCESS_KEY_SECRET_B64__
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alidns-webhook
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alidns-webhook:webhook-authentication-reader
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: alidns-webhook
+  namespace: __NAMESPACE__
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alidns-webhook:auth-delegator
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: alidns-webhook
+  namespace: __NAMESPACE__
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: alidns-webhook:flowcontrol
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+rules:
+- apiGroups:
+  - flowcontrol.apiserver.k8s.io
+  resources:
+  - "*"
+  verbs:
+  - list
+  - get
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alidns-webhook:flowcontrol
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: alidns-webhook:flowcontrol
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: alidns-webhook
+  namespace: __NAMESPACE__
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: alidns-webhook:domain-solver
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+rules:
+- apiGroups:
+  - __ALIDNS_GROUP_NAME__
+  resources:
+  - "*"
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alidns-webhook:domain-solver
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: alidns-webhook:domain-solver
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: cert-manager
+  namespace: __NAMESPACE__
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: alidns-webhook:secrets
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: alidns-webhook:secrets
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: alidns-webhook:secrets
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: alidns-webhook
+  namespace: __NAMESPACE__
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: alidns-webhook-selfsign
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: alidns-webhook-ca
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+spec:
+  secretName: alidns-webhook-ca
+  duration: 43800h
+  issuerRef:
+    name: alidns-webhook-selfsign
+  commonName: ca.alidns-webhook.cert-manager
+  isCA: true
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: alidns-webhook-ca
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+spec:
+  ca:
+    secretName: alidns-webhook-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: alidns-webhook-tls
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+spec:
+  secretName: alidns-webhook-tls
+  duration: 8760h
+  issuerRef:
+    name: alidns-webhook-ca
+  dnsNames:
+  - alidns-webhook
+  - alidns-webhook.__NAMESPACE__
+  - alidns-webhook.__NAMESPACE__.svc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alidns-webhook
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+spec:
+  type: ClusterIP
+  ports:
+  - port: 443
+    targetPort: https
+    protocol: TCP
+    name: https
+  selector:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alidns-webhook
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alidns-webhook
+      app.kubernetes.io/instance: alidns-webhook
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alidns-webhook
+        app.kubernetes.io/instance: alidns-webhook
+    spec:
+      serviceAccountName: alidns-webhook
+      containers:
+      - name: alidns-webhook
+        image: __ALIDNS_WEBHOOK_IMAGE__
+        imagePullPolicy: __IMAGE_PULL_POLICY__
+        args:
+        - --tls-cert-file=/tls/tls.crt
+        - --tls-private-key-file=/tls/tls.key
+        env:
+        - name: GROUP_NAME
+          value: __ALIDNS_GROUP_NAME_QUOTED__
+        ports:
+        - name: https
+          containerPort: 443
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /healthz
+            port: https
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /healthz
+            port: https
+        volumeMounts:
+        - name: certs
+          mountPath: /tls
+          readOnly: true
+      volumes:
+      - name: certs
+        secret:
+          secretName: alidns-webhook-tls
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.__ALIDNS_GROUP_NAME__
+  labels:
+    app.kubernetes.io/name: alidns-webhook
+    app.kubernetes.io/instance: alidns-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: __NAMESPACE__/alidns-webhook-tls
+spec:
+  group: __ALIDNS_GROUP_NAME__
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: alidns-webhook
+    namespace: __NAMESPACE__
+  version: v1alpha1
+# __ALIDNS_ISSUER_START__
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: __ALIDNS_ISSUER_NAME__
+spec:
+  acme:
+    email: __ALIDNS_EMAIL_QUOTED__
+    server: __ALIDNS_ACME_SERVER_QUOTED__
+    privateKeySecretRef:
+      name: __ALIDNS_ISSUER_NAME__-account-key
+    solvers:
+    - selector:
+        dnsZones:
+        - __ALIDNS_DOMAIN_QUOTED__
+      dns01:
+        webhook:
+          groupName: __ALIDNS_GROUP_NAME__
+          solverName: alidns
+          config:
+            region: __ALIDNS_REGION_QUOTED__
+            accessKeyIdRef:
+              name: __ALIDNS_SECRET_NAME__
+              key: access-key-id
+            accessKeySecretRef:
+              name: __ALIDNS_SECRET_NAME__
+              key: access-key-secret
+# __ALIDNS_ISSUER_END__
+# __ALIDNS_CERTIFICATE_START__
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: __ALIDNS_CERTIFICATE_NAME__
+  namespace: __ALIDNS_CERTIFICATE_NAMESPACE__
+spec:
+  secretName: __ALIDNS_CERTIFICATE_SECRET_NAME__
+  commonName: __ALIDNS_DOMAIN_QUOTED__
+  dnsNames:
+  - __ALIDNS_DOMAIN_QUOTED__
+# __ALIDNS_WILDCARD_DNS_NAME_LINE__
+  issuerRef:
+    name: __ALIDNS_ISSUER_NAME__
+    kind: ClusterIssuer
+# __ALIDNS_CERTIFICATE_END__
