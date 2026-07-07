@@ -32,6 +32,14 @@
     "tar": "cert-manager-acmesolver-amd64.tar"
   },
   {
+    "name": "alidns-webhook",
+    "arch": "amd64",
+    "platform": "linux/amd64",
+    "pull": "docker.io/wjiec/alidns-webhook:v1.0.3",
+    "tag": "sealos.hub:5000/kube4/wjiec/alidns-webhook:v1.0.3",
+    "tar": "alidns-webhook-amd64.tar"
+  },
+  {
     "name": "controller",
     "arch": "arm64",
     "platform": "linux/arm64",
@@ -62,5 +70,13 @@
     "pull": "quay.io/jetstack/cert-manager-acmesolver:v1.20.3",
     "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-acmesolver:v1.20.3",
     "tar": "cert-manager-acmesolver-arm64.tar"
+  },
+  {
+    "name": "alidns-webhook",
+    "arch": "arm64",
+    "platform": "linux/arm64",
+    "pull": "docker.io/wjiec/alidns-webhook:v1.0.3",
+    "tag": "sealos.hub:5000/kube4/wjiec/alidns-webhook:v1.0.3",
+    "tar": "alidns-webhook-arm64.tar"
   }
 ]
