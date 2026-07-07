@@ -1,0 +1,82 @@
+[
+  {
+    "name": "controller",
+    "arch": "amd64",
+    "platform": "linux/amd64",
+    "pull": "quay.io/jetstack/cert-manager-controller:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-controller:v1.20.3",
+    "tar": "cert-manager-controller-amd64.tar"
+  },
+  {
+    "name": "cainjector",
+    "arch": "amd64",
+    "platform": "linux/amd64",
+    "pull": "quay.io/jetstack/cert-manager-cainjector:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-cainjector:v1.20.3",
+    "tar": "cert-manager-cainjector-amd64.tar"
+  },
+  {
+    "name": "webhook",
+    "arch": "amd64",
+    "platform": "linux/amd64",
+    "pull": "quay.io/jetstack/cert-manager-webhook:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-webhook:v1.20.3",
+    "tar": "cert-manager-webhook-amd64.tar"
+  },
+  {
+    "name": "startupapicheck",
+    "arch": "amd64",
+    "platform": "linux/amd64",
+    "pull": "quay.io/jetstack/cert-manager-startupapicheck:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-startupapicheck:v1.20.3",
+    "tar": "cert-manager-startupapicheck-amd64.tar"
+  },
+  {
+    "name": "acmesolver",
+    "arch": "amd64",
+    "platform": "linux/amd64",
+    "pull": "quay.io/jetstack/cert-manager-acmesolver:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-acmesolver:v1.20.3",
+    "tar": "cert-manager-acmesolver-amd64.tar"
+  },
+  {
+    "name": "controller",
+    "arch": "arm64",
+    "platform": "linux/arm64",
+    "pull": "quay.io/jetstack/cert-manager-controller:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-controller:v1.20.3",
+    "tar": "cert-manager-controller-arm64.tar"
+  },
+  {
+    "name": "cainjector",
+    "arch": "arm64",
+    "platform": "linux/arm64",
+    "pull": "quay.io/jetstack/cert-manager-cainjector:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-cainjector:v1.20.3",
+    "tar": "cert-manager-cainjector-arm64.tar"
+  },
+  {
+    "name": "webhook",
+    "arch": "arm64",
+    "platform": "linux/arm64",
+    "pull": "quay.io/jetstack/cert-manager-webhook:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-webhook:v1.20.3",
+    "tar": "cert-manager-webhook-arm64.tar"
+  },
+  {
+    "name": "startupapicheck",
+    "arch": "arm64",
+    "platform": "linux/arm64",
+    "pull": "quay.io/jetstack/cert-manager-startupapicheck:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-startupapicheck:v1.20.3",
+    "tar": "cert-manager-startupapicheck-arm64.tar"
+  },
+  {
+    "name": "acmesolver",
+    "arch": "arm64",
+    "platform": "linux/arm64",
+    "pull": "quay.io/jetstack/cert-manager-acmesolver:v1.20.3",
+    "tag": "sealos.hub:5000/kube4/jetstack/cert-manager-acmesolver:v1.20.3",
+    "tar": "cert-manager-acmesolver-arm64.tar"
+  }
+]
